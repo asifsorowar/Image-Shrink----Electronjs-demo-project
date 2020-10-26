@@ -22,7 +22,7 @@ const createMainWindow = () => {
 };
 
 const createAboutMenuWindow = () => {
-  mainWindow = new BrowserWindow({
+  aboutMenuWindow = new BrowserWindow({
     title: "About ImageShrink",
     width: 300,
     height: 400,
@@ -30,7 +30,7 @@ const createAboutMenuWindow = () => {
     resizable: false,
   });
 
-  mainWindow.loadFile("./app/about.html");
+  aboutMenuWindow.loadFile("./app/about.html");
 };
 
 app.on("ready", () => {
