@@ -1,5 +1,18 @@
-const { app, BrowserWindow, Menu, globalShortcut } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  Menu,
+  globalShortcut,
+  ipcMain,
+  shell,
+} = require("electron");
 require("dotenv").config({ path: "./config/config.env" });
+const os = require("os");
+const path = require("path");
+const imagemin = require("imagemin");
+const imageminMozjpeg = require("imagemin-mozjpeg");
+const imageminPngquant = require("imagemin-pngquant");
+const slash = require("slash");
 
 isDev = process.env.NODE_ENV === "development" ? true : false;
 isWindow = process.platform.startsWith("win") ? true : false;
@@ -11,11 +24,19 @@ let aboutMenuWindow;
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
     title: "Image Shrink",
-    width: 500,
+    width: isDev ? 800 : 500,
     height: 600,
     icon: "./assets/icons/icon_256x256.png",
     resizable: isDev ? true : false,
+    backgroundColor: "white",
+    webPreferences: {
+      nodeIntegration: true,
+    },
   });
+
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
 
   // mainWindow.loadURL(`file://${__dirname}/app/index.html`);
   mainWindow.loadFile("./app/index.html");
@@ -28,6 +49,7 @@ const createAboutMenuWindow = () => {
     height: 400,
     icon: "./assets/icons/icon_256x256.png",
     resizable: false,
+    backgroundColor: "white",
   });
 
   aboutMenuWindow.loadFile("./app/about.html");
@@ -87,6 +109,31 @@ const menu = [
       ]
     : []),
 ];
+
+ipcMain.on("image:minimize", (e, options) => {
+  options.destination = path.join(os.homedir(), "imageShrink");
+  shrinkImage(options);
+});
+
+const shrinkImage = async ({ imgPath, quality, destination }) => {
+  try {
+    const pngQuality = quality / 100;
+    const files = await imagemin([slash(imgPath)], {
+      destination,
+      plugins: [
+        imageminMozjpeg({ quality }),
+        imageminPngquant({
+          quality: [pngQuality, pngQuality],
+        }),
+      ],
+    });
+
+    shell.openPath(destination);
+    mainWindow.webContents.send("image:done");
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 app.on("window-all-closed", () => {
   if (!isMac) app.quit();
